@@ -67,7 +67,7 @@ runs:
       id: poetry-extra-args
       shell: python
       env:
-        additional_dependency_groups: ${{ additional-dependency-groups }}
+        additional_dependency_groups: ${{ inputs.additional-dependency-groups }}
       run: |
         import json
         import os
