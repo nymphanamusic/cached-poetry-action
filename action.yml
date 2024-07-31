@@ -12,6 +12,9 @@ inputs:
   poetry-cache-dir:
     description: Where to install Poetry packages
     default: ~/poetry_cache
+  python-version:
+    description: Python version to install
+    required: true
 
 outputs:
   was-poetry-cached:
@@ -33,7 +36,7 @@ runs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ vars.PYTHON_VERSION }}
+        python-version: ${{ inputs.python-version }}
 
     - name: Load cached Poetry
       id: cache-poetry
@@ -52,7 +55,7 @@ runs:
       with:
         path: ${{ inputs.poetry-cache-dir }}
         key: >
-          ${{ runner.os }}-${{ env.cache-name }}-${{ vars.PYTHON_VERSION }}
+          ${{ runner.os }}-${{ env.cache-name }}-${{ inputs.python-version }}
           -${{ hashFiles('**/pyproject.toml') }}
 
     - name: Install Poetry if not cached
