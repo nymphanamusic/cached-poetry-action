@@ -1,0 +1,87 @@
+name: "Cached Poetry action"
+description: "A GitHub action that caches Poetry and your project's dependencies."
+
+inputs:
+  additional-dependency-groups:
+    description: >
+      Additional dependency groups to install (like using `poetry install --with ...`).
+      Write these as a JSON list.
+  poetry-home:
+    description: Where to install Poetry
+    default: ~/poetry
+  poetry-cache-dir:
+    description: Where to install Poetry packages
+    default: ~/poetry_cache
+
+outputs:
+  was-poetry-cached:
+    description: "Whether Poetry was loaded from a cache"
+    value: ${{ steps.cache-poetry.outputs.cache-hit }}
+  were-poetry-packages-cached:
+    description: "Whether Poetry packages were loaded from a cache"
+    value: ${{ steps.cache-poetry-packages.outputs.cache-hit }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Add Poetry to path
+      shell: bash
+      run: echo "PATH=${{ inputs.poetry-home }}/bin:${PATH}" >> $GITHUB_ENV
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ vars.PYTHON_VERSION }}
+
+    - name: Load cached Poetry
+      id: cache-poetry
+      uses: actions/cache@v4
+      env:
+        cache-name: cache-poetry
+      with:
+        path: ${{ inputs.poetry-home }}
+        key: ${{ runner.os }}-${{ env.cache-name }}
+
+    - name: Load cached Poetry packages
+      id: cache-poetry-packages
+      uses: actions/cache@v4
+      env:
+        cache-name: cache-poetry-packages
+      with:
+        path: ${{ inputs.poetry-cache-dir }}
+        key: >
+          ${{ runner.os }}-${{ env.cache-name }}-${{ vars.PYTHON_VERSION }}
+          -${{ hashFiles('**/pyproject.toml') }}
+
+    - name: Install Poetry if not cached
+      if: ${{ steps.cache-poetry.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: pipx install poetry
+
+    - name: Generate additional Poetry args
+      id: poetry-extra-args
+      shell: python
+      env:
+        additional_dependency_groups: ${{ additional-dependency-groups }}
+      run: |
+        import json
+        import os
+        import re
+
+        dep_groups = json.loads(os.getenv("additional_dependency_groups"))
+
+        # Sanitize! We don't want arbitrary code exec
+        if not all(re.match(r"^\w+$", i) for i in dep_groups):
+          raise ValueError("Invalid dependency group name(s)")
+        with_args = " ".join(f"--with {i}" for i in dep_groups)
+
+        # Write to Github output
+        with open(os.environ["GITHUB_OUTPUT"], "at") as f:
+          f.write(f"extra_args={with_args}")
+
+    - name: Install dependencies if not cached
+      if: ${{ steps.cache-poetry-packages.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: poetry install --no-root ${{ steps.poetry-extra-args.outputs.extra_args }}
