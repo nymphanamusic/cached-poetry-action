@@ -79,8 +79,8 @@ runs:
       env:
         POETRY_VERSION: ${{ inputs.poetry-version }}
       run: |
-        python3 -m venv $POETRY_HOME
-        & $POETRY_HOME/Scripts/pip install poetry==$POETRY_VERSION
+        python3 -m venv $env:POETRY_HOME
+        & $env:POETRY_HOME/Scripts/pip install poetry==$env:POETRY_VERSION
 
     - name: Generate additional Poetry args
       id: poetry-extra-args
