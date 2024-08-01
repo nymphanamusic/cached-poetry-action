@@ -35,8 +35,8 @@ runs:
     - name: Set Poetry env vars
       shell: bash
       run: |
-        echo "POETRY_HOME=${{ inputs.poetry-home }}" >> $GITHUB_ENV
-        echo "POETRY_CACHE_DIR=${{ inputs.poetry-cache-dir }}" >> $GITHUB_ENV
+        echo "POETRY_HOME=$(pwd)/${{ inputs.poetry-home }}" >> $GITHUB_ENV
+        echo "POETRY_CACHE_DIR=$(pwd)/${{ inputs.poetry-cache-dir }}" >> $GITHUB_ENV
 
     - name: Add Poetry to path
       shell: bash
