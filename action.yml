@@ -22,10 +22,10 @@ inputs:
 outputs:
   was-poetry-cached:
     description: "Whether Poetry was loaded from a cache"
-    value: ${{ steps.cache-poetry.outputs.cache-hit }}
+    value: ${{ steps.poetry-cache.outputs.cache-hit }}
   were-poetry-packages-cached:
     description: "Whether Poetry packages were loaded from a cache"
-    value: ${{ steps.cache-poetry-packages.outputs.cache-hit }}
+    value: ${{ steps.poetry-packages-cache.outputs.cache-hit }}
 
 runs:
   using: "composite"
@@ -47,27 +47,23 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Load cached Poetry
-      id: cache-poetry
+    - name: Cache Poetry
+      id: poetry-cache
       uses: actions/cache@v4
-      env:
-        cache-name: cache-poetry
       with:
         path: ${{ inputs.poetry-home }}
-        key: ${{ runner.os }}-${{ env.cache-name }}
+        key: poetry-cache-${{ runner.os }}-python${{ inputs.python-version }}-poetry${{ inputs.poetry-version }}
 
-    - name: Load cached Poetry packages
-      id: cache-poetry-packages
+    - name: Cache Poetry packages
+      id: poetry-packages-cache
       uses: actions/cache@v4
-      env:
-        cache-name: cache-poetry-packages
       with:
         path: ${{ inputs.poetry-cache-dir }}
         key: |
-          ${{ runner.os }}-${{ env.cache-name }}-${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          poetry-packages-cache-${{ runner.os }}-python${{ inputs.python-version }}-poetry${{ inputs.poetry-version }}-${{ hashFiles('**/pyproject.toml') }}
 
     - name: Install Poetry if not cached
-      if: ${{ steps.cache-poetry.outputs.cache-hit != 'true' }}
+      if: ${{ steps.poetry-cache.outputs.cache-hit != 'true' }}
       shell: bash
       env:
         POETRY_VERSION: ${{ inputs.poetry-version }}
@@ -77,7 +73,7 @@ runs:
 
     - name: Generate additional Poetry args
       id: poetry-extra-args
-      if: ${{ steps.cache-poetry-packages.outputs.cache-hit != 'true' }}
+      if: ${{ steps.poetry-packages-cache.outputs.cache-hit != 'true' }}
       shell: python
       env:
         additional_dependency_groups: ${{ inputs.additional-dependency-groups }}
@@ -98,6 +94,6 @@ runs:
           f.write(f"extra_args={with_args}")
 
     - name: Install dependencies if not cached
-      if: ${{ steps.cache-poetry-packages.outputs.cache-hit != 'true' }}
+      if: ${{ steps.poetry-packages-cache.outputs.cache-hit != 'true' }}
       shell: bash
       run: poetry install --no-root ${{ steps.poetry-extra-args.outputs.extra_args }}
