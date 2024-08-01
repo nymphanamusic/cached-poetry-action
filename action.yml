@@ -8,10 +8,13 @@ inputs:
       Write these as a JSON list.
   poetry-home:
     description: Where to install Poetry
-    default: ~/poetry
+    default: poetry
   poetry-cache-dir:
     description: Where to install Poetry packages
-    default: ~/poetry_cache
+    default: poetry_cache
+  poetry-version:
+    description: Version of Poetry to install
+    required: true
   python-version:
     description: Python version to install
     required: true
@@ -29,9 +32,12 @@ runs:
   steps:
     - uses: actions/checkout@v4
 
-    - name: Add Poetry to path
+    - name: Set Poetry env vars
       shell: bash
-      run: echo "PATH=${{ inputs.poetry-home }}/bin:${PATH}" >> $GITHUB_ENV
+      run: |
+        echo "POETRY_HOME=$GITHUB_ACTION_PATH/${{ inputs.poetry-home }}" >> $GITHUB_ENV
+        echo "POETRY_CACHE_DIR=$GITHUB_ACTION_PATH/${{ inputs.poetry-cache-dir }}" >> $GITHUB_ENV
+        echo "$POETRY_HOME/bin" >> $GITHUB_PATH
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -54,14 +60,17 @@ runs:
         cache-name: cache-poetry-packages
       with:
         path: ${{ inputs.poetry-cache-dir }}
-        key: >
-          ${{ runner.os }}-${{ env.cache-name }}-${{ inputs.python-version }}
-          -${{ hashFiles('**/pyproject.toml') }}
+        key: |
+          ${{ runner.os }}-${{ env.cache-name }}-${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}
 
     - name: Install Poetry if not cached
       if: ${{ steps.cache-poetry.outputs.cache-hit != 'true' }}
       shell: bash
-      run: pipx install poetry
+      env:
+        POETRY_VERSION: ${{ inputs.poetry-version }}
+      run: |
+        python3 -m venv $POETRY_HOME
+        $POETRY_HOME/bin/pip install poetry==$POETRY_VERSION
 
     - name: Generate additional Poetry args
       id: poetry-extra-args
