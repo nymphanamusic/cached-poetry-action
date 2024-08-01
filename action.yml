@@ -35,8 +35,13 @@ runs:
     - name: Set Poetry env vars
       shell: bash
       run: |
-        echo "POETRY_HOME=$(pwd)/${{ inputs.poetry-home }}" >> $GITHUB_ENV
-        echo "POETRY_CACHE_DIR=$(pwd)/${{ inputs.poetry-cache-dir }}" >> $GITHUB_ENV
+        if [[ ${{ runner.os }} -eq "Windows" ]]; then 
+          working_dir="$(cmd /c cd)"
+        else
+          working_dir="$(pwd)"
+        fi
+        echo "POETRY_HOME=$working_dir/${{ inputs.poetry-home }}" >> $GITHUB_ENV
+        echo "POETRY_CACHE_DIR=$working_dir/${{ inputs.poetry-cache-dir }}" >> $GITHUB_ENV
 
     - name: Add Poetry to path
       shell: bash
